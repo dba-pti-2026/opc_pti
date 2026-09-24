@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PTI — Xác thực chứng chỉ đại lý</title>
+<style>
+  :root{
+    --pti-blue:#1b3a8f;
+    --pti-blue2:#2456c7;
+    --pti-red:#e8422c;
+    --ink:#1f2530;
+    --muted:#7b8494;
+    --line:#e4e7ee;
+    --bg:#eef1f6;
+    --card:#ffffff;
+    --green:#1a9d54;
+    --amber:#e0a020;
+    --amber-bg:#fdf3dc;
+    --shadow:0 2px 12px rgba(20,30,60,.08);
+    --font:"Segoe UI",Roboto,-apple-system,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--font);color:var(--ink);background:var(--bg);font-size:14px;}
+
+  /* top bar */
+  .top{background:#fff;border-bottom:1px solid var(--line);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:20;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand .mk{font-weight:800;font-size:26px;color:var(--pti-blue);position:relative;line-height:1;}
+  .brand .mk::after{content:"";position:absolute;left:4px;top:1px;width:9px;height:9px;border-radius:50%;background:var(--pti-red);}
+  .brand small{font-size:8px;color:var(--muted);font-weight:700;letter-spacing:.5px;display:block;}
+  .search{flex:1;max-width:520px;margin:0 30px;position:relative;}
+  .search input{width:100%;padding:8px 12px 8px 34px;border:1px solid var(--line);border-radius:8px;background:#f7f8fb;font-size:13px;}
+  .search .ic{position:absolute;left:11px;top:8px;color:var(--muted);}
+  .search .kbd{position:absolute;right:10px;top:7px;font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:1px 6px;background:#fff;}
+  .top-user{display:flex;align-items:center;gap:8px;color:var(--pti-blue);font-weight:600;font-size:13px;}
+  .top-user .ava{width:30px;height:30px;border-radius:50%;background:#cfd6e4;display:flex;align-items:center;justify-content:center;color:#fff;}
+
+  /* filter bar */
+  .filters{background:#fff;border-bottom:1px solid var(--line);padding:12px 20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+  .filters .sel,.filters .inp{border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px;background:#fff;color:var(--ink);}
+  .filters .inp{min-width:180px;}
+  .filters .sel{min-width:200px;color:var(--muted);}
+  .filters .grow{flex:1;}
+  .btn{border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:.15s;}
+  .btn-blue{background:var(--pti-blue);color:#fff;}
+  .btn-blue:hover{background:#16307a;}
+  .btn-go{background:var(--pti-blue2);color:#fff;}
+  .btn-ghost{background:#fff;color:var(--ink);border:1px solid var(--line);}
+  .btn-ghost:hover{background:#f4f6fa;}
+
+  /* page */
+  .wrap{padding:18px 20px;}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;}
+  thead th{text-align:left;font-size:12px;color:var(--muted);font-weight:700;padding:14px 14px;border-bottom:1px solid var(--line);background:#fafbfd;white-space:nowrap;}
+  tbody td{padding:14px 14px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:top;}
+  tbody tr{cursor:pointer;transition:.12s;}
+  tbody tr:hover{background:#f6f9ff;}
+  .id-cell{font-weight:700;color:var(--pti-blue);}
+  .desc-cell{max-width:360px;line-height:1.5;}
+  .proc-cell{color:#3a4152;line-height:1.5;}
+  .date-cell{line-height:1.5;white-space:nowrap;}
+  .date-exp{color:var(--pti-red);}
+  .chip{display:inline-block;background:var(--amber-bg);color:var(--amber);font-size:11px;font-weight:700;padding:3px 12px;border-radius:5px;border:1px solid #f0dfae;}
+  .cert-count{display:inline-block;margin-left:8px;background:#e7efff;color:var(--pti-blue);font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;}
+  .actions{display:flex;gap:8px;}
+  .act-ic{width:30px;height:30px;border:1px solid var(--line);border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:pointer;background:#fff;font-size:14px;}
+  .act-ic:hover{border-color:var(--pti-blue);color:var(--pti-blue);}
+
+  /* ===== detail view ===== */
+  .detail{display:none;}
+  .detail.active{display:block;}
+  .list-view.hidden{display:none;}
+  .req-banner{background:#fff7e8;border-bottom:1px solid #f0e2c0;text-align:center;padding:12px;font-size:14px;color:#5a4a20;font-weight:600;}
+  .back-row{padding:14px 20px 0;}
+  .back-link{color:var(--pti-blue);font-weight:600;cursor:pointer;font-size:13px;display:inline-flex;gap:6px;align-items:center;}
+  .back-link:hover{text-decoration:underline;}
+
+  .detail-body{max-width:1100px;margin:0 auto;padding:20px;}
+  .field-lbl{font-size:13px;font-weight:600;margin-bottom:6px;}
+  .req-star{color:var(--pti-red);}
+  .sel-box{width:100%;max-width:420px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff;margin-bottom:22px;}
+
+  .sec-title{font-size:16px;font-weight:700;margin:18px 0 14px;color:var(--ink);}
+
+  /* customer block */
+  .cust{display:flex;gap:26px;align-items:flex-start;background:#fafbfd;border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:8px;}
+  .cust-sticky{position:sticky;top:56px;z-index:15;background:var(--bg);padding-bottom:8px;box-shadow:0 6px 8px -6px rgba(0,0,0,.12);}
+  .cust-photo{width:160px;height:160px;border-radius:10px;background:#e9ecf2;display:flex;align-items:center;justify-content:center;color:#b8bfcd;font-size:40px;flex-shrink:0;overflow:hidden;}
+  .cust-info{display:grid;grid-template-columns:1fr 1fr;gap:10px 40px;}
+  .cust-info .ci .k{font-size:12px;color:var(--muted);}
+  .cust-info .ci .v{font-size:14px;font-weight:700;margin-top:2px;}
+
+  /* certificate cards */
+  .cert-wrap{margin-top:6px;}
+  .cert-card{border:1px solid var(--line);border-radius:12px;margin-bottom:16px;overflow:hidden;}
+  .cert-card.approved{border-color:#bfe6cd;}
+  .cert-card.rejected{border-color:#f2c4bb;}
+  .cert-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:#f7f9fc;border-bottom:1px solid var(--line);}
+  .cert-hd .lft{display:flex;align-items:center;gap:12px;}
+  .cert-hd .num{width:26px;height:26px;border-radius:50%;background:var(--pti-blue);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .cert-hd .ttl{font-weight:700;font-size:14px;}
+  .cert-hd .typ{font-size:12px;color:var(--muted);}
+  .status-pill{font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;background:#eef1f6;color:var(--muted);}
+  .status-pill.wait{background:#fdf3dc;color:var(--amber);}
+  .status-pill.ok{background:#e2f5e9;color:var(--green);}
+  .status-pill.no{background:#fce6e2;color:var(--pti-red);}
+
+  .cert-bd{display:flex;gap:22px;padding:18px;}
+  .cert-img{width:280px;height:180px;border-radius:8px;background:#eef0f4;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#b0b7c4;overflow:hidden;position:relative;cursor:pointer;}
+  .cert-img svg{width:100%;height:100%;}
+  .cert-img .zoom{position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;padding:3px 8px;border-radius:5px;}
+  .cert-meta{flex:1;}
+  .cert-meta .mrow{display:flex;padding:6px 0;font-size:13px;border-bottom:1px dashed var(--line);}
+  .cert-meta .mrow .k{color:var(--muted);width:150px;flex-shrink:0;}
+  .cert-meta .mrow .v{font-weight:700;}
+
+  .cert-decision{padding:14px 18px;background:#fbfcfe;border-top:1px solid var(--line);}
+  .dec-row{display:flex;align-items:center;gap:24px;margin-bottom:10px;flex-wrap:wrap;}
+  .dec-lbl{font-weight:700;font-size:13px;}
+  .radio-opt{display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;}
+  .radio-opt input{width:16px;height:16px;accent-color:var(--pti-blue);cursor:pointer;}
+  .radio-opt.rej input{accent-color:var(--pti-red);}
+  .reason{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;display:none;}
+  .reason.show{display:block;}
+
+  /* summary bar */
+  .summary{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--line);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 -2px 12px rgba(20,30,60,.06);}
+  .sum-stats{display:flex;gap:18px;font-size:13px;align-items:center;}
+  .sum-stats b{font-size:15px;}  .sum-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-weight:700;font-size:12px;}
+  .sum-pill.ok{background:#e2f5e9;color:var(--green);}
+  .sum-pill.no{background:#fce6e2;color:var(--pti-red);}
+  .sum-pill.wait{background:#fdf3dc;color:var(--amber);}
+
+  /* case switcher */
+  .cases{display:flex;gap:8px;padding:0 20px 4px;flex-wrap:wrap;}
+  .case-tab{font-size:12px;padding:6px 12px;border:1px solid var(--line);border-radius:20px;cursor:pointer;background:#fff;color:var(--muted);font-weight:600;}
+  .case-tab:hover{border-color:var(--pti-blue);}
+
+  /* modal image zoom */
+  .zoom-overlay{position:fixed;inset:0;background:rgba(15,20,35,.7);display:none;align-items:center;justify-content:center;z-index:60;padding:30px;}
+  .zoom-overlay.show{display:flex;}
+  .zoom-box{background:#fff;border-radius:12px;padding:16px;max-width:640px;width:100%;}
+  .zoom-box .zh{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-weight:700;}
+  .zoom-box .x{cursor:pointer;color:var(--muted);border:none;background:none;font-size:22px;}
+
+  /* review popup */
+  .rv-group{margin-bottom:18px;}
+  .rv-group-hd{margin-bottom:10px;}
+  .rv-item{border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:8px;}
+  .rv-group.ok .rv-item{border-color:#bfe6cd;background:#f4fbf6;}
+  .rv-group.no .rv-item{border-color:#f2c4bb;background:#fdf5f3;}
+  .rv-item .rv-t{font-weight:700;font-size:13px;}
+  .rv-item .rv-s{font-size:12px;color:var(--muted);margin-top:2px;}
+  .rv-item .rv-reason{font-size:12px;color:var(--pti-red);margin-top:6px;}
+  .rv-empty{font-size:12px;color:var(--muted);padding:4px 2px;}
+
+  /* action tooltips */
+  .act-ic{position:relative;}
+  .act-ic .tip{position:absolute;top:36px;left:50%;transform:translateX(-50%);background:#1f2530;color:#fff;font-size:11px;padding:4px 9px;border-radius:5px;white-space:nowrap;opacity:0;pointer-events:none;transition:.12s;z-index:30;}
+  .act-ic .tip::before{content:"";position:absolute;top:-4px;left:50%;transform:translateX(-50%);border:4px solid transparent;border-bottom-color:#1f2530;}
+  .act-ic:hover .tip{opacity:1;}
+
+  /* ops modals */
+  .ops-overlay{position:fixed;inset:0;background:rgba(20,30,60,.35);display:none;align-items:center;justify-content:center;z-index:70;padding:20px;}
+  .ops-overlay.show{display:flex;}
+  .ops{background:#fff;border-radius:12px;width:440px;max-width:100%;box-shadow:0 20px 60px rgba(20,30,60,.25);overflow:hidden;display:flex;flex-direction:column;max-height:calc(100vh - 60px);}
+  .ops.wide{width:640px;}
+  .ops-hd{display:flex;align-items:center;justify-content:space-between;padding:18px 22px 10px;}
+  .ops-hd h3{margin:0;font-size:17px;}
+  .ops-hd .x{border:none;background:none;font-size:22px;color:var(--muted);cursor:pointer;}
+  .ops-bd{padding:6px 22px 20px;overflow-y:auto;}
+  .empty-box{display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--muted);padding:36px 0;font-size:13px;}
+  .empty-box .ei{font-size:44px;color:#d3d9e3;}
+  .cmt-input-row{display:flex;gap:10px;margin-top:8px;}
+  .cmt-input-row input{flex:1;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;}
+  .cmt-item{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:13px;}
+  .cmt-item .meta{font-size:11px;color:var(--muted);margin-bottom:3px;}
+
+  /* reassign */
+  .rs-search{position:relative;margin-bottom:14px;}
+  .rs-search input{width:100%;padding:9px 12px 9px 32px;border:1px solid var(--line);border-radius:8px;font-size:13px;}
+  .rs-search .ic{position:absolute;left:10px;top:9px;color:var(--muted);}
+  .rs-table{width:100%;border-collapse:collapse;}
+  .rs-table th{text-align:left;font-size:12px;color:var(--muted);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--line);}
+  .rs-table td{padding:10px;border-bottom:1px solid var(--line);font-size:13px;}
+  .rs-table tr{cursor:pointer;}
+  .rs-table tr:hover{background:#f6f9ff;}
+  .rs-table .uname{color:var(--pti-blue);font-weight:600;}
+  .rs-radio{width:16px;height:16px;accent-color:var(--pti-blue);}
+  .pager{display:flex;gap:6px;justify-content:center;align-items:center;margin:14px 0;font-size:13px;}
+  .pager .pg{width:28px;height:28px;border:1px solid var(--line);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);}
+  .pager .pg.active{border-color:var(--pti-blue);color:var(--pti-blue);font-weight:700;background:#eef4ff;}
+  .rs-reason-lbl{font-size:13px;font-weight:600;margin:6px 0;}
+  .rs-reason{width:100%;min-height:70px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;resize:vertical;}
+  .ops-actions{display:flex;justify-content:flex-end;gap:10px;align-items:center;padding:14px 22px;border-top:1px solid var(--line);}
+  .lnk-cancel{color:var(--muted);font-size:13px;cursor:pointer;}
+  .lnk-cancel:hover{color:var(--ink);}
+
+  /* toast */
+  .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:11px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:99;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .muted{color:var(--muted);}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand">
+    <div class="mk">pti</div>
+    <div><small>BẢO HIỂM BƯU ĐIỆN</small></div>
+  </div>
+  <div class="search">
+    <span class="ic">🔍</span>
+    <input placeholder="Tìm kiếm...">
+    <span class="kbd">Ctrl K</span>
+  </div>
+  <div class="top-user"><div class="ava">◔</div>opc_all</div>
+</div>
+
+<!-- ============ LIST VIEW ============ -->
+<div class="list-view" id="list-view">
+  <div class="filters">
+    <select class="sel"><option>Content</option></select>
+    <input class="inp" placeholder="Search">
+    <input class="inp" placeholder="Request number">
+    <button class="btn btn-go">Go to</button>
+    <select class="sel" style="min-width:260px"><option>Quy trình xác thực chứng chỉ đại lý</option></select>
+    <select class="sel"><option>Task Status</option></select>
+    <div class="grow"></div>
+    <button class="btn btn-ghost">↻ Reset</button>
+    <button class="btn btn-blue">🔍 Tìm kiếm</button>
+  </div>
+
+  <div class="wrap">
+    <div class="panel">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th><th>Mô tả</th><th>Quy trình</th><th>Task Name</th>
+            <th>Ngày tạo</th><th>Ngày hết hạn</th><th>Người tạo</th><th>Ưu tiên</th><th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="task-rows"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============ DETAIL VIEW ============ -->
+<div class="detail" id="detail-view">
+  <div class="req-banner" id="req-banner"></div>
+  <div class="back-row">
+    <span class="back-link" onclick="showList()">← Quay lại danh sách</span>
+  </div>
+  <div class="detail-body">
+    <div class="field-lbl"><span class="req-star">*</span> Nơi nhận yêu cầu</div>
+    <select class="sel-box" id="loc-select"><option value="">-- Chọn --</option><option>Hà Nội</option><option>TP. Hồ Chí Minh</option><option>Đà Nẵng</option></select>
+
+    <div class="cust-sticky">
+      <div class="sec-title" style="margin-top:14px">Thông tin khách hàng</div>
+      <div class="cust">
+        <div class="cust-photo" id="cust-photo">🖼</div>
+        <div class="cust-info" id="cust-info"></div>
+      </div>
+    </div>
+
+    <div class="sec-title">Chứng chỉ đại lý cần xác thực <span class="cert-count" id="detail-cert-count"></span></div>
+    <div class="cert-wrap" id="cert-wrap"></div>
+  </div>
+
+  <div class="summary" style="justify-content:flex-end">
+    <button class="btn btn-blue" style="padding:10px 22px" onclick="openReview()">» Xác nhận</button>
+  </div>
+</div>
+
+<!-- Comments modal -->
+<div class="ops-overlay" id="cmt-overlay" onclick="closeOps('cmt-overlay',event)">
+  <div class="ops" onclick="event.stopPropagation()">
+    <div class="ops-hd"><h3>Comments</h3><button class="x" onclick="closeOps('cmt-overlay')">×</button></div>
+    <div class="ops-bd">
+      <div id="cmt-list"></div>
+      <div class="cmt-input-row">
+        <input id="cmt-input" placeholder="Nhập bình luận..." onkeydown="if(event.key==='Enter')sendComment()">
+        <button class="btn btn-go" onclick="sendComment()">➤ Gửi</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reassign modal -->
+<div class="ops-overlay" id="rs-overlay" onclick="closeOps('rs-overlay',event)">
+  <div class="ops wide" onclick="event.stopPropagation()">
+    <div class="ops-hd"><h3>Reassign task</h3><button class="x" onclick="closeOps('rs-overlay')">×</button></div>
+    <div class="ops-bd">
+      <div class="rs-search"><span class="ic">🔍</span><input placeholder="Search" oninput="filterUsers(this.value)"></div>
+      <table class="rs-table">
+        <thead><tr><th>Username</th><th>FullName</th><th style="width:40px"></th></tr></thead>
+        <tbody id="rs-rows"></tbody>
+      </table>
+      <div class="pager" id="rs-pager"></div>
+      <div class="rs-reason-lbl"><span style="color:var(--pti-red)">*</span> Reasons:</div>
+      <textarea class="rs-reason" id="rs-reason" placeholder="Nhập lý do giao lại..."></textarea>
+    </div>
+    <div class="ops-actions">
+      <span class="lnk-cancel" onclick="closeOps('rs-overlay')">Cancel</span>
+      <button class="btn btn-go" onclick="doReassign()">👤 Assign</button>
+    </div>
+  </div>
+</div>
+
+<!-- zoom -->
+<div class="zoom-overlay" id="zoom-overlay" onclick="closeZoom(event)">
+  <div class="zoom-box" onclick="event.stopPropagation()">
+    <div class="zh"><span>Ảnh chứng chỉ</span><button class="x" onclick="closeZoom()">×</button></div>
+    <div id="zoom-content"></div>
+  </div>
+</div>
+
+<!-- Review popup -->
+<div class="ops-overlay" id="rv-overlay" onclick="closeOps('rv-overlay',event)">
+  <div class="ops wide" onclick="event.stopPropagation()">
+    <div class="ops-hd"><h3>Xác nhận kết quả xác thực chứng chỉ</h3><button class="x" onclick="closeOps('rv-overlay')">×</button></div>
+    <div class="ops-bd" id="rv-body"></div>
+    <div class="ops-actions">
+      <span class="lnk-cancel" onclick="closeOps('rv-overlay')">Quay lại</span>
+      <button class="btn btn-go" onclick="submitAll()">✓ Xác nhận</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- fake data ---------- */
+const CERT_TYPES=[
+  'Chứng chỉ đại lý bảo hiểm phi nhân thọ cơ bản',
+  'Chứng chỉ đại lý bảo hiểm hàng hải',
+  'Chứng chỉ đại lý bảo hiểm hàng không',
+  'Chứng chỉ đại lý bảo hiểm sức khỏe'
+];
+
+function certImg(seed){
+  const tints=['#eaf2fb','#eef7ee','#fbf1e8','#f1eefb'];
+  const t=tints[seed%4];
+  return `<svg viewBox="0 0 280 180" xmlns="http://www.w3.org/2000/svg">
+    <rect width="280" height="180" fill="${t}"/>
+    <rect x="14" y="14" width="252" height="152" rx="6" fill="#fff" stroke="#d7dce6"/>
+    <rect x="30" y="28" width="120" height="9" rx="4" fill="#c3ccdb"/>
+    <rect x="30" y="46" width="80" height="7" rx="3" fill="#d6dce7"/>
+    <circle cx="220" cy="55" r="26" fill="#dbe6f6" stroke="#c3d2ea"/>
+    <text x="220" y="60" font-size="18" text-anchor="middle" fill="#8ba0c4">PTI</text>
+    <rect x="30" y="78" width="180" height="7" rx="3" fill="#e2e7ef"/>
+    <rect x="30" y="94" width="200" height="7" rx="3" fill="#e2e7ef"/>
+    <rect x="30" y="110" width="150" height="7" rx="3" fill="#e2e7ef"/>
+    <rect x="30" y="134" width="90" height="20" rx="4" fill="#eef1f6"/>
+  </svg>`;
+}
+
+// build a certificate object
+function mkCert(i, typeIdx){
+  return {
+    type: CERT_TYPES[typeIdx % 4],
+    number: (['CCDL','PTI','HK','SK'][typeIdx%4]) + Math.floor(100000+Math.random()*899999),
+    issued: ['02-03-2026','15-11-2025','20-06-2025','08-07-2026'][i%4],
+    decision: null,   // 'approve' | 'reject' | null
+    reason: ''
+  };
+}
+
+// 4 cases: 1,2,3,4 certificates. Customer info fake.
+const TASKS = [
+  { id:'003419', name:'LÊ MẪU A',  dob:'26-06-1997', cccd:'0420970xxxxx', desc:'Xác thực chứng chỉ đại lý.4535xxxxx.0420970xxxxx.LÊ MẪU A',  certs:[mkCert(0,0)] },
+  { id:'003395', name:'NGUYỄN MẪU B', dob:'10-05-1995', cccd:'0430918xxxxx', desc:'Xác thực chứng chỉ đại lý.1000xxxxx.0430918xxxxx.NGUYỄN MẪU B', certs:[mkCert(0,0),mkCert(1,1)] },
+  { id:'003142', name:'QUYỀN MẪU C', dob:'03-12-1990', cccd:'0362000xxxxx', desc:'Xác thực chứng chỉ đại lý.1234xxx.0362000xxxxx.QUYỀN MẪU C', certs:[mkCert(0,0),mkCert(1,1),mkCert(2,2)] },
+  { id:'003140', name:'HOÀNG MẪU D', dob:'21-09-1988', cccd:'0150890xxxxx', desc:'Xác thực chứng chỉ đại lý.1000xxxxx.0150890xxxxx.HOÀNG MẪU D', certs:[mkCert(0,0),mkCert(1,1),mkCert(2,2),mkCert(3,3)] },
+];
+
+const META = {
+  '003419':{proc:'Quy trình xác thực chứng chỉ đại lý',task:'Task 1. Xác thực chứng chỉ đại lý ICA',created:'28/03/2026 18:10:36',due:'29/03/2026 18:10:36'},
+  '003395':{proc:'Quy trình xác thực chứng chỉ đại lý',task:'Task 1. Xác thực chứng chỉ đại lý ICA',created:'08/12/2025 10:19:09',due:'09/12/2025 10:19:09'},
+  '003142':{proc:'Quy trình xác thực chứng chỉ đại lý',task:'Task 1. Xác thực chứng chỉ đại lý ICA',created:'15/10/2025 16:37:04',due:'16/10/2025 16:37:04'},
+  '003140':{proc:'Quy trình xác thực chứng chỉ đại lý',task:'Task 1. Xác thực chứng chỉ đại lý ICA',created:'15/10/2025 11:03:10',due:'16/10/2025 11:03:10'},
+};
+
+/* ---------- render list ---------- */
+function renderList(){
+  const tb=document.getElementById('task-rows');
+  tb.innerHTML=TASKS.map(t=>{
+    const m=META[t.id];
+    return `<tr onclick="openTask('${t.id}')">
+      <td class="id-cell">${t.id}</td>
+      <td class="desc-cell">${t.desc}<span class="cert-count">${t.certs.length} chứng chỉ</span></td>
+      <td class="proc-cell">${m.proc}</td>
+      <td class="proc-cell">${m.task}</td>
+      <td class="date-cell">${m.created}</td>
+      <td class="date-cell date-exp">${m.due}</td>
+      <td>dpm_admin</td>
+      <td><span class="chip">MEDIUM</span></td>
+      <td><div class="actions">
+        <div class="act-ic" onclick="event.stopPropagation();openTask('${t.id}')">📂<span class="tip">Open</span></div>
+        <div class="act-ic" onclick="event.stopPropagation();openComments('${t.id}')">💬<span class="tip">Comment</span></div>
+        <div class="act-ic" onclick="event.stopPropagation();openReassign('${t.id}')">👤<span class="tip">Reassign</span></div>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ---------- open task detail ---------- */
+let currentTask=null;
+function openTask(id){
+  currentTask=TASKS.find(t=>t.id===id);
+  // reset decisions each open
+  currentTask.certs.forEach(c=>{c.decision=null;c.reason='';});
+
+  document.getElementById('list-view').classList.add('hidden');
+  document.getElementById('detail-view').classList.add('active');
+  document.getElementById('req-banner').textContent=`Request: ${currentTask.id} — Description: ${currentTask.desc}`;
+
+  // customer
+  document.getElementById('cust-info').innerHTML=`
+    <div class="ci"><div class="k">Họ Tên</div><div class="v">${currentTask.name}</div></div>
+    <div class="ci"><div class="k">Ngày sinh</div><div class="v">${currentTask.dob}</div></div>
+    <div class="ci"><div class="k">Số CCCD</div><div class="v">${currentTask.cccd}</div></div>
+    <div class="ci"><div class="k">Số chứng chỉ</div><div class="v">${currentTask.certs.length} chứng chỉ</div></div>`;
+
+  document.getElementById('detail-cert-count').textContent=currentTask.certs.length+' chứng chỉ';
+  document.getElementById('loc-select').value='';
+  renderCerts();
+  window.scrollTo(0,0);
+}
+
+/* ---------- render certificates ---------- */
+function renderCerts(){
+  const wrap=document.getElementById('cert-wrap');
+  wrap.innerHTML=currentTask.certs.map((c,i)=>{
+    const cardCls=c.decision==='approve'?'approved':c.decision==='reject'?'rejected':'';
+    return `<div class="cert-card ${cardCls}" id="cc-${i}">
+      <div class="cert-hd">
+        <div class="lft">
+          <div class="num">${i+1}</div>
+          <div>
+            <div class="ttl">${c.type}</div>
+            <div class="typ">Số CCĐL: ${c.number}</div>
+          </div>
+        </div>
+      </div>
+      <div class="cert-bd">
+        <div class="cert-img" onclick="openZoom(${i})">
+          ${certImg(i)}
+          <span class="zoom">🔍 Xem lớn</span>
+        </div>
+        <div class="cert-meta">
+          <div class="mrow"><span class="k">Loại chứng chỉ</span><span class="v">${c.type}</span></div>
+          <div class="mrow"><span class="k">Số CCĐL</span><span class="v">${c.number}</span></div>
+          <div class="mrow"><span class="k">Ngày cấp CCĐL</span><span class="v">${c.issued}</span></div>
+        </div>
+      </div>
+      <div class="cert-decision">
+        <div class="dec-row">
+          <span class="dec-lbl">Kết quả phê duyệt:</span>
+          <label class="radio-opt"><input type="radio" name="dec-${i}" ${c.decision==='approve'?'checked':''} onchange="setDecision(${i},'approve')"> Phê duyệt</label>
+          <label class="radio-opt rej"><input type="radio" name="dec-${i}" ${c.decision==='reject'?'checked':''} onchange="setDecision(${i},'reject')"> Từ chối</label>
+        </div>
+        <input class="reason ${c.decision==='reject'?'show':''}" id="reason-${i}" placeholder="Mời nhập lý do từ chối..." value="${c.reason}" oninput="currentTask.certs[${i}].reason=this.value">
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setDecision(i,val){
+  currentTask.certs[i].decision=val;
+  // toggle reason box
+  const r=document.getElementById('reason-'+i);
+  if(val==='reject')r.classList.add('show'); else r.classList.remove('show');
+  // update card border without full re-render (keep focus)
+  const card=document.getElementById('cc-'+i);
+  card.classList.remove('approved','rejected');
+  card.classList.add(val==='approve'?'approved':'rejected');
+}
+
+/* ---------- review popup ---------- */
+function openReview(){
+  if(!document.getElementById('loc-select').value){toast('Vui lòng chọn Nơi nhận yêu cầu');return;}
+  const cs=currentTask.certs;
+  const wait=cs.filter(c=>!c.decision);
+  if(wait.length){toast('Còn '+wait.length+' chứng chỉ chưa chọn kết quả');return;}
+  const noReason=cs.find(c=>c.decision==='reject'&&!c.reason.trim());
+  if(noReason){toast('Vui lòng nhập lý do cho chứng chỉ bị từ chối');return;}
+
+  submitAll();
+  return;
+
+  const okList=cs.filter(c=>c.decision==='approve');
+  const noList=cs.filter(c=>c.decision==='reject');
+  let html='';
+
+  html+=`<div class="rv-group ok">
+    <div class="rv-group-hd"><span class="sum-pill ok">✓ Được phê duyệt (${okList.length})</span></div>`;
+  html+= okList.length
+    ? okList.map(c=>`<div class="rv-item"><div class="rv-t">${c.type}</div><div class="rv-s">Số CCĐL: ${c.number}</div></div>`).join('')
+    : `<div class="rv-empty">Không có</div>`;
+  html+=`</div>`;
+
+  html+=`<div class="rv-group no">
+    <div class="rv-group-hd"><span class="sum-pill no">✕ Bị từ chối (${noList.length})</span></div>`;
+  html+= noList.length
+    ? noList.map(c=>`<div class="rv-item"><div class="rv-t">${c.type}</div><div class="rv-s">Số CCĐL: ${c.number}</div><div class="rv-reason">Lý do từ chối: ${c.reason}</div></div>`).join('')
+    : `<div class="rv-empty">Không có</div>`;
+  html+=`</div>`;
+
+  document.getElementById('rv-body').innerHTML=html;
+  document.getElementById('rv-overlay').classList.add('show');
+}
+
+/* ---------- submit ---------- */
+function submitAll(){
+  const cs=currentTask.certs;
+  const ok=cs.filter(c=>c.decision==='approve').length;
+  const no=cs.filter(c=>c.decision==='reject').length;
+  closeOps('rv-overlay');
+  toast(`Đã gửi kết quả: ${ok} được phê duyệt, ${no} bị từ chối ✓`);
+  setTimeout(showList,1200);
+}
+
+/* ---------- nav ---------- */
+function showList(){
+  document.getElementById('detail-view').classList.remove('active');
+  document.getElementById('list-view').classList.remove('hidden');
+  window.scrollTo(0,0);
+}
+
+/* ---------- zoom ---------- */
+function openZoom(i){
+  document.getElementById('zoom-content').innerHTML=`<div style="border:1px solid var(--line);border-radius:8px;overflow:hidden">${certImg(i)}</div>
+    <div style="margin-top:10px;font-size:13px" class="muted">${currentTask.certs[i].type} — ${currentTask.certs[i].number}</div>`;
+  document.getElementById('zoom-overlay').classList.add('show');
+}
+function closeZoom(e){document.getElementById('zoom-overlay').classList.remove('show');}
+
+/* ---------- toast ---------- */
+let tT;
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('show'),2400);}
+
+/* ---------- comments ---------- */
+const COMMENTS={}; // taskId -> [ {who,text,time} ]
+let cmtTask=null;
+function openComments(id){
+  cmtTask=id;
+  renderComments();
+  document.getElementById('cmt-overlay').classList.add('show');
+  setTimeout(()=>document.getElementById('cmt-input').focus(),50);
+}
+function renderComments(){
+  const arr=COMMENTS[cmtTask]||[];
+  const list=document.getElementById('cmt-list');
+  if(!arr.length){
+    list.innerHTML=`<div class="empty-box"><div class="ei">🗋</div>No data</div>`;
+  }else{
+    list.innerHTML=arr.map(c=>`<div class="cmt-item"><div class="meta">${c.who} · ${c.time}</div>${c.text}</div>`).join('');
+  }
+}
+function sendComment(){
+  const inp=document.getElementById('cmt-input');
+  const v=inp.value.trim();if(!v)return;
+  (COMMENTS[cmtTask]=COMMENTS[cmtTask]||[]).push({who:'opc_all',text:v,time:new Date().toLocaleString('vi-VN')});
+  inp.value='';renderComments();toast('Đã gửi bình luận');
+}
+
+/* ---------- reassign ---------- */
+const USERS=[
+  {u:'ipa\\chung.ta2',f:'Tạ Thị Mẫu'},{u:'pti\\ngantq',f:'Trương Quế Mẫu'},
+  {u:'pti\\opc_all',f:'null opc_all'},{u:'pti\\thanhht2',f:'Hoàng Thị Mẫu'},
+  {u:'pti\\anhdm',f:'Đàm Mai Mẫu'},{u:'pti\\hungnv',f:'Nguyễn Văn Mẫu'},
+  {u:'pti\\lanpt',f:'Phạm Thị Mẫu'},{u:'pti\\dungtq',f:'Trần Quốc Mẫu'},
+  {u:'pti\\minhpv',f:'Phan Văn Mẫu'},{u:'pti\\yenlh',f:'Lê Hải Mẫu'},
+];
+let rsTask=null,rsPage=1,rsSel=null,rsFilter='';
+const RS_PER=5;
+function openReassign(id){
+  rsTask=id;rsPage=1;rsSel=null;rsFilter='';
+  document.getElementById('rs-reason').value='';
+  renderUsers();
+  document.getElementById('rs-overlay').classList.add('show');
+}
+function filteredUsers(){
+  if(!rsFilter)return USERS;
+  const q=rsFilter.toLowerCase();
+  return USERS.filter(x=>x.u.toLowerCase().includes(q)||x.f.toLowerCase().includes(q));
+}
+function renderUsers(){
+  const all=filteredUsers();
+  const pages=Math.max(1,Math.ceil(all.length/RS_PER));
+  if(rsPage>pages)rsPage=pages;
+  const slice=all.slice((rsPage-1)*RS_PER,rsPage*RS_PER);
+  document.getElementById('rs-rows').innerHTML=slice.map(x=>`
+    <tr onclick="selUser('${x.u.replace(/\\/g,'\\\\')}')">
+      <td class="uname">${x.u}</td><td>${x.f}</td>
+      <td><input type="radio" class="rs-radio" name="rsu" ${rsSel===x.u?'checked':''}></td>
+    </tr>`).join('');
+  // pager (mimic 1 2 3 4 5 ... 8 style)
+  let pg='';
+  pg+=`<div class="pg" onclick="rsGo(${Math.max(1,rsPage-1)})">‹</div>`;
+  for(let i=1;i<=pages;i++){pg+=`<div class="pg ${i===rsPage?'active':''}" onclick="rsGo(${i})">${i}</div>`;}
+  pg+=`<div class="pg" onclick="rsGo(${Math.min(pages,rsPage+1)})">›</div>`;
+  document.getElementById('rs-pager').innerHTML=pg;
+}
+function selUser(u){rsSel=u.replace(/\\\\/g,'\\');renderUsers();}
+function rsGo(p){rsPage=p;renderUsers();}
+function filterUsers(v){rsFilter=v;rsPage=1;renderUsers();}
+function doReassign(){
+  if(!rsSel){toast('Vui lòng chọn người nhận');return;}
+  if(!document.getElementById('rs-reason').value.trim()){toast('Vui lòng nhập lý do (Reasons)');return;}
+  toast('Đã giao lại task '+rsTask+' cho '+rsSel);
+  closeOps('rs-overlay');
+}
+
+function closeOps(id,e){
+  if(e&&e.target!==e.currentTarget)return;
+  document.getElementById(id).classList.remove('show');
+}
+
+renderList();
+</script>
+</body>
+</html>
